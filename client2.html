@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client 2</title>
+    <style>
+        div{
+            border: 1px solid #aaaaaa;
+            padding: 1rem;
+        }
+        #videoDiv{
+            display: flex;
+            justify-content: space-between;
+        }
+        #local{
+            width: 40%;
+            background: pink;
+        }
+        #remote{
+            width: 40%;
+            background: skyblue;
+        }
+    </style>
+</head>
+<body>
+    <input type="text" placeholder="msg" id="msgInput"/>
+    <button id="msgSend">Send</button>
+    <input type="text" placeholder="remote sdp" id="remoteSDP" />
+    <button id="sdpSend">Send</button>
+    <div id="sdp"></div>
+    <div id="rsdp"></div>
+    <div id="msgBox"></div>
+    
+    <div id="videoDiv">
+        <video id="local" autoplay></video>
+        <video id="remote" autoplay></video>
+    </div>
+
+    <script>
+
+        const msginput = document.querySelector('#msgInput')
+        const msgSend = document.querySelector('#msgSend')
+        const remoteSDP = document.querySelector('#remoteSDP')
+        const sdpSend = document.querySelector('#sdpSend')
+        const sdp = document.getElementById('sdp')
+        const msgBox = document.getElementById('msgBox')
+        const rsdp = document.getElementById('rsdp')
+
+        let offer;
+
+         const configuration = {
+                'iceServers': [
+                    {'urls': 'stun:stun.l.google.com:19302'},
+                    {'urls': 'stun:stun1.l.google.com:19302'},
+                    {'urls': 'stun:stun2.l.google.com:19302'},
+                ]
+        }
+
+        const remoteCon = new RTCPeerConnection(configuration)
+
+        sdpSend.addEventListener('click', e => {
+           offer = remoteSDP.value
+           rsdp.textContent = offer;
+           console.log(offer)
+           console.log(JSON.parse(offer))
+           remoteCon.setRemoteDescription(JSON.parse(offer)).then(a => console.log("offer set"))
+        
+            remoteCon.createAnswer().then(a => {
+            remoteCon.setLocalDescription(a)
+            }).then(a => console.log("answer created"))
+        })
+
+        remoteCon.onicecandidate = e => {
+            console.log("new ice Candidate , reprinting SDP" + JSON.stringify(remoteCon.localDescription))
+            sdp.textContent = JSON.stringify(remoteCon.localDescription)
+        }
+
+        
+
+        remoteCon.ondatachannel = e => {
+            remoteCon.dc = e.channel
+            remoteCon.dc.onmessage = e => {
+                console.log("New Msg from client 1 : ",e.data)
+                const msg = document.createElement('div')
+                msg.textContent = e.data
+                msgBox.appendChild(msg)
+            }
+            remoteCon.dc.onopen = e => console.log("Connection open!!!")
+        }
+
+
+        // if(offer && typeof(offer) === "object"){
+        // remoteCon.setRemoteDescription(offer).then(a => console.log("offer set"))
+        
+        // remoteCon.createAnswer().then(a => {
+        //     remoteCon.setLocalDescription(a)
+        //     sdp.textContent = a
+        // }).then(a => console.log("answer created"))
+        // }
+
+        msgSend.addEventListener('click', e => {
+            let msgContent = msgInput.value
+            let div = document.createElement('div')
+            div.textContent = msgContent
+            
+            remoteCon.dc.send(msgContent)
+            msgBox.appendChild(div)
+        }) 
+        
+
+
+
+    </script>
+</body>
+
+</html>

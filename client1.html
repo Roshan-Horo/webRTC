@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client 1</title>
+    <style>
+        div{
+            border: 1px solid #aaaaaa;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    
+    <input type="text" placeholder="msg" id="msgInput"/>
+    <button id="msgSend">Send</button>
+    <input type="text" placeholder="remote sdp" id="remoteSDP" />
+    <button id="sdpSend">Send</button>
+    <div id="sdp"></div>
+    <div id="rsdp"></div>
+    <div id="msgBox"></div>
+    <video id="video"></video> 
+    <script>
+
+        const msgInput = document.querySelector('#msgInput')
+        const msgSend = document.querySelector('#msgSend')
+        const remoteSDP = document.querySelector('#remoteSDP')
+        const sdpSend = document.querySelector('#sdpSend')
+        const sdp = document.getElementById('sdp')
+        const msgBox = document.getElementById('msgBox')
+        const rsdp = document.getElementById('rsdp')
+
+        let answer;
+
+         const configuration = {
+                'iceServers': [
+                    {'urls': 'stun:stun.l.google.com:19302'},
+                    {'urls': 'stun:stun1.l.google.com:19302'},
+                    {'urls': 'stun:stun2.l.google.com:19302'},
+                ]
+        }
+        const localCon = new RTCPeerConnection(configuration)
+
+        const dataChannel = localCon.createDataChannel("channel")
+
+        dataChannel.onmessage = e => {
+            console.log("New Msg : ",e.data)
+            const msg = document.createElement('div')
+            msg.textContent = e.data
+            msgBox.appendChild(msg)
+        }
+
+        dataChannel.onopen = e => console.log("connection open!")
+
+        localCon.onicecandidate = e => {
+            console.log(`New Candidate, reprinting SDP : ${JSON.stringify(localCon.localDescription)}`)
+            sdp.textContent = JSON.stringify(localCon.localDescription)
+        }
+        localCon.createOffer().then(o => (
+           localCon.setLocalDescription(o)
+        )
+        ).then(a => console.log("offer set"))
+
+        sdpSend.addEventListener('click', e => {
+           answer = remoteSDP.value
+           rsdp.textContent = answer
+           localCon.setRemoteDescription(JSON.parse(answer))
+        })
+
+        msgSend.addEventListener('click', e => {
+            let msgContent = msgInput.value
+            let div = document.createElement('div')
+            div.textContent = msgContent
+            
+            dataChannel.send(msgContent)
+            msgBox.appendChild(div)
+        }) 
+
+
+
+        
+
+        
+    </script>
+</body>
+
+</html>
